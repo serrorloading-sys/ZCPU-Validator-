@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZCPU Validator Pro v48</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f8fafc; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Table Controls */
+        th { position: sticky; top: 0; background-color: #f1f5f9; z-index: 10; user-select: none; position: relative; border-right: 1px solid #cbd5e1; }
+        th:hover { background-color: #e2e8f0; border-right: 2px solid #94a3b8; }
+        .header-content { cursor: pointer; display: block; padding: 12px; width: 100%; height: 100%; }
+        .resizer { position: absolute; right: 0; top: 0; bottom: 0; width: 5px; cursor: col-resize; background: transparent; }
+        .resizer:hover { background: #3b82f6; }
+
+        /* Tags */
+        .tag-good { background-color: #dcfce7; color: #166534; font-weight: 700; border: 1px solid #86efac; padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+        .tag-dmg { background-color: #fee2e2; color: #991b1b; font-weight: 700; border: 1px solid #fca5a5; padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+        .tag-exp { background-color: #1f2937; color: #f3f4f6; font-weight: 700; border: 1px solid #000; padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+        .tag-near { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; font-weight: 700; padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+    </style>
+</head>
+<body class="p-4 md:p-6 text-gray-800">
+
+    <div id="landingPage" class="fixed inset-0 z-50 bg-gray-100 flex flex-col items-center justify-center p-6 fade-in">
+        <h1 class="text-4xl font-bold text-gray-800 mb-2"><i class="fas fa-cubes text-blue-600 mr-3"></i>ZCPU Validator Pro</h1>
+        <p class="text-gray-500 mb-10">Single Entity System (GS1 Standard)</p>
+        
+        <button onclick="openZCPU()" class="bg-white p-10 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-1 border-t-8 border-blue-600 flex flex-col items-center">
+            <i class="fas fa-play-circle text-6xl text-blue-600 mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-800">Start Audit</h2>
+            <p class="text-sm text-gray-500 mt-2">Standard GS1 Logic</p>
+        </button>
+    </div>
+
+    <div id="zcpuWorkspace" class="hidden w-full max-w-[98%] mx-auto pb-10 fade-in">
+        
+        <div class="bg-white border rounded shadow-sm px-4 py-3 flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h1 class="text-xl font-bold text-gray-800"><i class="fas fa-warehouse text-blue-600 mr-2"></i>ZCPU Validator <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">v48 Full</span></h1>
+            <div class="flex gap-2">
+                <button onclick="openSettingsPage()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-bold shadow transition"><i class="fas fa-sliders-h mr-2"></i> Settings</button>
+                <button onclick="location.reload()" class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded text-sm font-bold border border-red-200"><i class="fas fa-home mr-1"></i> Exit</button>
+            </div>
+        </div>
+
+        <div id="settingsPage" class="hidden fixed inset-0 z-50 bg-gray-100 flex flex-col fade-in">
+            <div class="bg-white p-4 border-b shadow-sm flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-tools text-blue-600 mr-2"></i>Configuration Manager</h2>
+                <button onclick="closeSettingsPage()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded font-bold transition">Back</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-indigo-500">
+                        <h3 class="text-lg font-bold text-indigo-800 mb-4 border-b pb-2">1. System Header Mapping</h3>
+                        <p class="text-xs text-gray-500 mb-2">Keywords to find columns in System Dump (Comma separated).</p>
+                        <div class="space-y-3">
+                            <div><label class="text-xs font-bold text-gray-700">Qty / Count Headers</label><input type="text" id="keyQty" value="count,qty,quantity,unrestricted,unrestricted qty,stock,menge" class="w-full border p-2 rounded text-sm bg-indigo-50"></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="text-xs font-bold text-gray-700">Material Headers</label><input type="text" id="keyMat" value="material,mat. code,matnr,article,sku" class="w-full border p-2 rounded text-sm"></div>
+                                <div><label class="text-xs font-bold text-gray-700">Batch Headers</label><input type="text" id="keyBatch" value="batch,lot,charg" class="w-full border p-2 rounded text-sm"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="text-xs font-bold text-gray-700">Serial Headers</label><input type="text" id="keySer" value="serial,serial no,sno,ser" class="w-full border p-2 rounded text-sm"></div>
+                                <div><label class="text-xs font-bold text-gray-700">Plant Headers</label><input type="text" id="keyPlant" value="plant,site,werks" class="w-full border p-2 rounded text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500">
+                        <h3 class="text-lg font-bold text-blue-800 mb-4 border-b pb-2">2. Logic & Priorities</h3>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-bold text-gray-700 mb-1">Plant Priority (For Material Only Match)</label><input type="text" id="txtPriority" value="WGJ1, WGJ7, WGJ4" class="w-full border p-2 rounded text-sm font-mono uppercase bg-blue-50"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-sm font-bold text-gray-700">Near Expiry (Mo)</label><input type="number" id="setNear" value="5" class="w-full border p-2 rounded text-sm"></div>
+                                <div><label class="text-sm font-bold text-gray-700">Short Expiry (Mo)</label><input type="number" id="setShort" value="12" class="w-full border p-2 rounded text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-purple-500">
+                        <h3 class="text-lg font-bold text-purple-800 mb-4 border-b pb-2">3. Export Layout Manager</h3>
+                        <p class="text-xs text-gray-500 mb-2">Define columns & order for Excel Export.</p>
+                        <textarea id="txtExportLayout" class="w-full border p-3 rounded text-xs font-mono h-24 bg-purple-50">Status,Condition,Storage_Loc,Material,Material_Desc,Scan_String,Phy_Batch,Phy_Serial,Sys_Batch,Sys_Serial,Plant,Customer,Name,Comment</textarea>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-gray-500">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">4. Output Messages</h3>
+                        <div class="space-y-2">
+                            <div><label class="text-xs font-bold text-gray-500">Perfect Match</label><input type="text" id="txtMatch" value="Matched OK" class="w-full border p-1 rounded text-xs"></div>
+                            <div><label class="text-xs font-bold text-gray-500">Batch Match Only</label><input type="text" id="txtBatch" value="Batch Match" class="w-full border p-1 rounded text-xs"></div>
+                            <div><label class="text-xs font-bold text-gray-500">Variance</label><input type="text" id="txtVar" value="Not in SAP" class="w-full border p-1 rounded text-xs"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-yellow-500"><h3 class="text-lg font-bold text-yellow-800 mb-4 border-b pb-2">5. Material Master (CSV)</h3><textarea id="txtMatMaster" class="w-full border p-3 rounded text-xs font-mono h-24 bg-yellow-50" placeholder="MAT001,Drill Machine"></textarea></div>
+                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-green-500"><h3 class="text-lg font-bold text-green-800 mb-4 border-b pb-2">6. Customer Master (CSV)</h3><textarea id="txtCustMaster" class="w-full border p-3 rounded text-xs font-mono h-24 bg-green-50" placeholder="C001,Rahul Traders"></textarea></div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 border-t text-center">
+                <button onclick="saveSettings()" class="bg-green-600 text-white px-8 py-3 rounded-lg font-bold shadow-lg hover:bg-green-700 transform active:scale-95 transition">
+                    <i class="fas fa-save mr-2"></i> Save All Settings
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+            <div class="md:col-span-5 bg-white p-4 rounded shadow border-l-4 border-blue-500 relative">
+                <label class="block text-sm font-bold text-blue-800 mb-2">1. Scan File (GS1 / ZCPU)</label>
+                <input type="file" id="fileScan" onchange="previewFile()" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 cursor-pointer"/>
+                <div class="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+                    <div><label class="font-bold text-gray-600">Scan Col:</label><select id="colScan" class="w-full border rounded bg-gray-50"><option value="0">Col A (0)</option><option value="1">Col B (1)</option><option value="2">Col C (2)</option></select></div>
+                    <div><label class="font-bold text-gray-600">Cond Col:</label><select id="colCond" class="w-full border rounded bg-gray-50"><option value="1">Col B (1)</option><option value="0">Col A (0)</option><option value="2">Col C (2)</option><option value="3">Col D (3)</option></select></div>
+                    <div class="flex items-center pt-3"><input type="checkbox" id="chkHeader" class="mr-1" checked> <label for="chkHeader">Has Header?</label></div>
+                </div>
+                <div id="scanPreview" class="hidden mt-3 bg-gray-100 p-2 rounded border text-[10px] font-mono overflow-x-auto"><div class="font-bold text-gray-500 mb-1">File Preview:</div><table class="w-full text-left border-collapse"><thead><tr class="bg-gray-200"><th class="p-1 border">A</th><th class="p-1 border">B</th><th class="p-1 border">C</th></tr></thead><tbody id="previewBody"></tbody></table></div>
+            </div>
+
+            <div class="md:col-span-5 bg-white p-4 rounded shadow border-l-4 border-green-500">
+                <label class="block text-sm font-bold text-green-800 mb-1">2. YSRL / MB52 Dump</label>
+                <div class="text-[10px] text-gray-400 mb-2">Reads: Material, Desc, Batch, Serial, Qty, Plant, Customer</div>
+                <input type="file" id="fileSystem" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-green-50 file:text-green-700 cursor-pointer"/>
+            </div>
+
+            <div class="md:col-span-2 flex items-center justify-center">
+                <button onclick="runZCPU()" id="btnRun" class="w-full h-full max-h-24 bg-blue-800 hover:bg-blue-900 text-white rounded shadow-lg font-bold text-lg transition transform active:scale-[0.99] flex flex-col items-center justify-center"><span><i class="fas fa-play mr-2"></i> VALIDATE</span></button>
+            </div>
+        </div>
+
+        <div id="zcpuDashboard" class="hidden space-y-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-blue-50 p-3 rounded shadow border-t-4 border-blue-800"><div class="text-[10px] font-bold text-blue-800 uppercase">Total SAP</div><div class="text-2xl font-bold text-blue-900" id="kpi-sap">0</div></div>
+                <div class="bg-white p-3 rounded shadow border-t-4 border-gray-500"><div class="text-[10px] font-bold text-gray-500 uppercase">Scanned</div><div class="text-2xl font-bold text-gray-800" id="kpi-scan">0</div></div>
+                <div class="bg-purple-50 p-3 rounded shadow border-t-4 border-purple-600"><div class="text-[10px] font-bold text-purple-800 uppercase">Remaining</div><div class="text-2xl font-bold text-purple-900" id="kpi-remain">0</div></div>
+                <div class="bg-white p-3 rounded shadow border-t-4 border-red-500"><div class="text-[10px] font-bold text-red-600 uppercase">Variance</div><div class="text-2xl font-bold text-red-700" id="kpi-var">0</div></div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-green-50 p-3 rounded shadow border-t-4 border-green-600">
+                    <div class="flex justify-between"><div class="text-[10px] font-bold text-green-700 uppercase">Serial Match</div><i class="fas fa-check text-green-400"></i></div>
+                    <div class="text-2xl font-bold text-green-800" id="kpi-serial">0</div>
+                    <div class="text-[9px] text-green-600" id="kpi-serial-detail"></div>
+                </div>
+                <div class="bg-yellow-50 p-3 rounded shadow border-t-4 border-yellow-500"><div class="text-[10px] font-bold text-yellow-700 uppercase">Batch Match</div><div class="text-2xl font-bold text-yellow-800" id="kpi-batch">0</div></div>
+                <div class="bg-orange-50 p-3 rounded shadow border-t-4 border-orange-500"><div class="text-[10px] font-bold text-orange-700 uppercase">Material Only</div><div class="text-2xl font-bold text-orange-800" id="kpi-mat">0</div></div>
+                <div class="bg-red-100 p-3 rounded shadow border-t-4 border-red-800"><div class="text-[10px] font-bold text-red-900 uppercase">Phy Damage</div><div class="text-2xl font-bold text-red-900" id="kpi-dmg">0</div></div>
+            </div>
+
+            <div class="flex justify-between items-center bg-white p-3 rounded shadow border">
+                <input type="text" id="searchBox" onkeyup="filterTable()" placeholder="Search..." class="border rounded px-4 py-2 text-sm w-1/3 focus:outline-none focus:border-blue-500">
+                <button onclick="exportZCPU()" class="bg-green-600 text-white px-6 py-2 rounded font-bold text-sm hover:bg-green-700"><i class="fas fa-file-excel mr-2"></i> Export Pro</button>
+            </div>
+
+            <div class="bg-white rounded shadow overflow-hidden border">
+                <div class="overflow-x-auto max-h-[600px]">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-gray-100 text-gray-700 uppercase font-bold sticky top-0">
+                            <tr>
+                                <th class="border-b"><span class="header-content" onclick="sortBy('statusPriority')">Status</span><div class="resizer"></div></th>
+                                <th class="border-b bg-red-50 text-red-700"><span class="header-content" onclick="sortBy('phyState')">Condition</span><div class="resizer"></div></th>
+                                <th class="border-b bg-gray-200 text-gray-800"><span class="header-content" onclick="sortBy('storageLoc')">S.Loc</span><div class="resizer"></div></th>
+                                <th class="border-b"><span class="header-content" onclick="sortBy('mat')">Material</span><div class="resizer"></div></th>
+                                <th class="border-b min-w-[150px]"><span class="header-content" onclick="sortBy('matDesc')">Desc</span><div class="resizer"></div></th>
+                                <th class="border-b text-gray-500"><span class="header-content" onclick="sortBy('scanString')">String</span><div class="resizer"></div></th>
+                                <th class="border-b bg-blue-50 text-blue-900"><span class="header-content" onclick="sortBy('phyBatch')">P.Batch</span><div class="resizer"></div></th>
+                                <th class="border-b bg-blue-50 text-blue-900"><span class="header-content" onclick="sortBy('phySer')">P.Ser</span><div class="resizer"></div></th>
+                                <th class="border-b bg-green-50 text-green-900"><span class="header-content" onclick="sortBy('sysBatch')">S.Batch</span><div class="resizer"></div></th>
+                                <th class="border-b bg-green-50 text-green-900"><span class="header-content" onclick="sortBy('sysSer')">S.Ser</span><div class="resizer"></div></th>
+                                <th class="border-b bg-gray-200 text-gray-800"><span class="header-content" onclick="sortBy('sysPlant')">Plant</span><div class="resizer"></div></th>
+                                <th class="border-b bg-yellow-50 text-yellow-900 min-w-[150px]"><span class="header-content" onclick="sortBy('sysName')">Name</span><div class="resizer"></div></th>
+                                <th class="border-b"><span class="header-content" onclick="sortBy('comment')">Comment</span><div class="resizer"></div></th>
+                            </tr>
+                        </thead>
+                        <tbody id="zcpuBody" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- PAGE MANAGEMENT ---
+        function openZCPU() { document.getElementById('landingPage').classList.add('hidden'); document.getElementById('zcpuWorkspace').classList.remove('hidden'); loadSettings(); }
+        function openSettingsPage() { document.getElementById('settingsPage').classList.remove('hidden'); }
+        function closeSettingsPage() { document.getElementById('settingsPage').classList.add('hidden'); }
+
+        // --- SETTINGS LOGIC ---
+        function saveSettings() {
+            localStorage.setItem('sap_priority', document.getElementById('txtPriority').value);
+            localStorage.setItem('sap_near', document.getElementById('setNear').value);
+            localStorage.setItem('sap_short', document.getElementById('setShort').value);
+            localStorage.setItem('sap_match', document.getElementById('txtMatch').value);
+            localStorage.setItem('sap_batch', document.getElementById('txtBatch').value);
+            localStorage.setItem('sap_var', document.getElementById('txtVar').value);
+            localStorage.setItem('sap_mat_master', document.getElementById('txtMatMaster').value);
+            localStorage.setItem('sap_cust_master', document.getElementById('txtCustMaster').value);
+            localStorage.setItem('sap_export_layout', document.getElementById('txtExportLayout').value);
+            
+            localStorage.setItem('key_qty', document.getElementById('keyQty').value);
+            localStorage.setItem('key_mat', document.getElementById('keyMat').value);
+            localStorage.setItem('key_batch', document.getElementById('keyBatch').value);
+            localStorage.setItem('key_ser', document.getElementById('keySer').value);
+            localStorage.setItem('key_plant', document.getElementById('keyPlant').value);
+            alert('Settings Saved Successfully!');
+            closeSettingsPage();
+        }
+
+        function loadSettings() {
+            if(localStorage.getItem('sap_priority')) document.getElementById('txtPriority').value = localStorage.getItem('sap_priority');
+            if(localStorage.getItem('sap_near')) document.getElementById('setNear').value = localStorage.getItem('sap_near');
+            if(localStorage.getItem('sap_short')) document.getElementById('setShort').value = localStorage.getItem('sap_short');
+            if(localStorage.getItem('sap_match')) document.getElementById('txtMatch').value = localStorage.getItem('sap_match');
+            if(localStorage.getItem('sap_batch')) document.getElementById('txtBatch').value = localStorage.getItem('sap_batch');
+            if(localStorage.getItem('sap_var')) document.getElementById('txtVar').value = localStorage.getItem('sap_var');
+            if(localStorage.getItem('sap_mat_master')) document.getElementById('txtMatMaster').value = localStorage.getItem('sap_mat_master');
+            if(localStorage.getItem('sap_cust_master')) document.getElementById('txtCustMaster').value = localStorage.getItem('sap_cust_master');
+            if(localStorage.getItem('sap_export_layout')) document.getElementById('txtExportLayout').value = localStorage.getItem('sap_export_layout');
+            
+            if(localStorage.getItem('key_qty')) document.getElementById('keyQty').value = localStorage.getItem('key_qty');
+            if(localStorage.getItem('key_mat')) document.getElementById('keyMat').value = localStorage.getItem('key_mat');
+            if(localStorage.getItem('key_batch')) document.getElementById('keyBatch').value = localStorage.getItem('key_batch');
+            if(localStorage.getItem('key_ser')) document.getElementById('keySer').value = localStorage.getItem('key_ser');
+            if(localStorage.getItem('key_plant')) document.getElementById('keyPlant').value = localStorage.getItem('key_plant');
+        }
+        document.addEventListener('DOMContentLoaded', loadSettings);
+
+        const clean = (val) => String(val || '').trim();
+        function safeUpdate(id, val) { const el = document.getElementById(id); if(el) el.innerText = val; }
+
+        function parseMaster(text) {
+            let map = {}; if(!text) return map;
+            text.split('\n').forEach(line => { let p = line.split(','); if(p.length>=2) map[clean(p[0]).toUpperCase()] = p.slice(1).join(',').trim(); });
+            return map;
+        }
+        const readArr = (file) => new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type:'array'}).SheetNames[0]], {header:1, defval:""}));
+            reader.readAsArrayBuffer(file);
+        });
+
+        async function previewFile() {
+            const data = await readArr(document.getElementById('fileScan').files[0]);
+            document.getElementById('scanPreview').classList.remove('hidden');
+            document.getElementById('previewBody').innerHTML = data.slice(0,3).map(r => `<tr class="border-b"><td class="p-1 border text-blue-700">${r[0]||'-'}</td><td class="p-1 border">${r[1]||'-'}</td><td class="p-1 border">${r[2]||'-'}</td></tr>`).join('');
+        }
+
+        function parseGS1(raw) {
+            let s = clean(raw).replace(/[\u0000-\u001F]/g,"").replace(/\s+/g,"");
+            let p = { mat:"", batch:"", ser:"", expStr:"", isDefSer: false };
+            let m = s.match(/\(240\)([^()]+)/); if(m) p.mat = m[1];
+            let b = s.match(/\(10\)([^()]+)/); if(b) p.batch = b[1];
+            let sr = s.match(/\(21\)([^()]+)/); if(sr) p.ser = sr[1]; else { p.ser="001"; p.isDefSer=true; }
+            let ex = s.match(/\(17\)([^()]+)/); if(ex) p.expStr = ex[1];
+            return p;
+        }
+
+        function parseGS1Date(yymmdd) {
+            if(!yymmdd || yymmdd.length !== 6) return null;
+            return new Date(2000 + parseInt(yymmdd.substring(0,2)), parseInt(yymmdd.substring(2,4)) - 1, parseInt(yymmdd.substring(4,6)));
+        }
+
+        function findColIndex(headers, keywords) { return headers.findIndex(h => keywords.some(k => h.includes(k))); }
+
+        let zcpuData = []; let displayedData = []; let sortState = { key: '', order: 'asc' };
+
+        const initResize = (e) => {
+            e.stopPropagation(); const th = e.target.parentElement; const startX = e.pageX; const startW = th.offsetWidth;
+            const onMove = (eMove) => { th.style.width = `${startW + (eMove.pageX - startX)}px`; };
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+            document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
+        };
+        document.addEventListener('DOMContentLoaded', () => { document.querySelectorAll('.resizer').forEach(div => div.addEventListener('mousedown', initResize)); });
+
+        async function runZCPU() {
+            const btn = document.getElementById('btnRun'); btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
+            
+            const hasHeader = document.getElementById('chkHeader').checked;
+            const iScan = parseInt(document.getElementById('colScan').value);
+            const iCond = parseInt(document.getElementById('colCond').value);
+            
+            const matMaster = parseMaster(document.getElementById('txtMatMaster').value);
+            const custMaster = parseMaster(document.getElementById('txtCustMaster').value);
+            const priorityStr = document.getElementById('txtPriority').value;
+            const priorities = priorityStr.split(',').map(s=>s.trim().toUpperCase());
+            const msgMatch = document.getElementById('txtMatch').value;
+            const msgBatch = document.getElementById('txtBatch').value;
+            const msgVar = document.getElementById('txtVar').value;
+            
+            const KEYS = {
+                mat: document.getElementById('keyMat').value.split(',').map(s=>s.trim()),
+                batch: document.getElementById('keyBatch').value.split(',').map(s=>s.trim()),
+                ser: document.getElementById('keySer').value.split(',').map(s=>s.trim()),
+                qty: document.getElementById('keyQty').value.split(',').map(s=>s.trim()),
+                plant: document.getElementById('keyPlant').value.split(',').map(s=>s.trim()),
+                desc: ["description", "material description", "mat. desc"],
+                custCode: ["customer", "cust no"], custName: ["customer name", "name"]
+            };
+
+            const moNear = parseInt(document.getElementById('setNear').value) || 5;
+            const moShort = parseInt(document.getElementById('setShort').value) || 12;
+            const today = new Date();
+
+            try {
+                const [rawScan, rawSys] = await Promise.all([readArr(document.getElementById('fileScan').files[0]), readArr(document.getElementById('fileSystem').files[0])]);
+                
+                const hSys = rawSys[0].map(x => String(x).toLowerCase());
+                const idx = {
+                    mat: findColIndex(hSys, KEYS.mat), desc: findColIndex(hSys, KEYS.desc),
+                    batch: findColIndex(hSys, KEYS.batch), ser: findColIndex(hSys, KEYS.ser),
+                    qty: findColIndex(hSys, KEYS.qty), plant: findColIndex(hSys, KEYS.plant),
+                    cust: findColIndex(hSys, KEYS.custCode), name: findColIndex(hSys, KEYS.custName)
+                };
+
+                let inventoryMap = {}; let totalSap = 0;
+                for(let i=1; i<rawSys.length; i++) {
+                    const r = rawSys[i];
+                    if(r[idx.mat]) {
+                        let mat = clean(r[idx.mat]);
+                        let desc = idx.desc>-1?clean(r[idx.desc]):(matMaster[mat.toUpperCase()]||"-");
+                        let cust = idx.cust>-1?clean(r[idx.cust]):"-";
+                        let name = idx.name>-1?clean(r[idx.name]):(custMaster[cust.toUpperCase()]||"-");
+                        let item = { 
+                            mat, batch: clean(r[idx.batch]), ser: idx.ser>-1?clean(r[idx.ser]):"", 
+                            qty: idx.qty>-1?parseFloat(r[idx.qty])||1:1, plant: idx.plant>-1?clean(r[idx.plant]):"-",
+                            desc, cust, name, used: 0 
+                        };
+                        if(!inventoryMap[mat]) inventoryMap[mat] = [];
+                        inventoryMap[mat].push(item);
+                        totalSap += item.qty;
+                    }
+                }
+
+                let scanStart = hasHeader ? 1 : 0;
+                zcpuData = [];
+                let stats = { tot:0, matchExact:0, matchSmart:0, dmg:0, batchMatch:0, matMatch:0, var:0 };
+
+                for(let i=scanStart; i<rawScan.length; i++) {
+                    const raw = rawScan[i][iScan]; if(!raw) continue;
+                    
+                    stats.tot++;
+                    let p = parseGS1(raw);
+                    const longSer = p.batch + p.ser;
+
+                    let condition = rawScan[i][iCond] ? String(rawScan[i][iCond]).toLowerCase() : "";
+                    let phyState = "GOOD", stateClass = "tag-good";
+                    if(condition.includes("damage") || condition.includes("dmg")) { phyState = "DAMAGE"; stateClass = "tag-dmg"; stats.dmg++; }
+                    else if(p.expStr) {
+                        let expDate = parseGS1Date(p.expStr);
+                        if(expDate) {
+                            let diff = (expDate - today) / (1000 * 60 * 60 * 24 * 30.44);
+                            if(diff < 0) { phyState = "EXPIRED"; stateClass = "tag-exp"; }
+                            else if(diff < moNear) { phyState = "NEAR EXPIRY"; stateClass = "tag-near"; }
+                            else if(diff < moShort) { phyState = "SHORT EXPIRY"; stateClass = "tag-short"; }
+                        }
+                    }
+                    
+                    let storageLoc = (phyState === "GOOD") ? "RT01" : "DMG1";
+
+                    let status="Variance", matchClass="text-red-600 font-bold", sysBatch="-", sysSer="-", sysPlant="-", sysCust="-", sysName="-", matDesc="-", comment=msgVar, priority=0;
+                    let candidates = inventoryMap[p.mat] || [];
+                    let match = null;
+
+                    if(candidates.length > 0) matDesc = candidates[0].desc; 
+                    else matDesc = matMaster[p.mat.toUpperCase()] || "-";
+
+                    match = candidates.find(x => x.used<x.qty && x.batch === p.batch && (p.ser==="" || x.ser===p.ser));
+                    if(match) {
+                        match.used++; status="Matched"; matchClass="text-green-600 font-bold"; 
+                        sysBatch=match.batch; sysSer=match.ser; sysPlant=match.plant; sysCust=match.cust; sysName=match.name; matDesc=match.desc;
+                        comment=msgMatch; priority=3; stats.matchExact++;
+                    } else {
+                        match = candidates.find(x => x.used<x.qty && x.ser === (p.batch+p.ser));
+                        if(match) {
+                            match.used++; status="Matched"; matchClass="text-green-600 font-bold"; 
+                            sysBatch=match.batch; sysSer=match.ser; sysPlant=match.plant; sysCust=match.cust; sysName=match.name; matDesc=match.desc;
+                            comment=msgMatch; priority=3; stats.matchSmart++;
+                        } else {
+                            match = candidates.find(x => x.used<x.qty && x.batch === p.batch);
+                            if(match) {
+                                match.used++; status="Partial"; matchClass="text-yellow-600 font-bold"; 
+                                sysBatch=match.batch; sysSer=match.ser; sysPlant=match.plant; sysCust=match.cust; sysName=match.name; matDesc=match.desc;
+                                comment=msgBatch; priority=2; stats.batchMatch++;
+                            } else {
+                                for(let pl of priorities) {
+                                    match = candidates.find(x => x.used<x.qty && x.plant===pl);
+                                    if(match) break;
+                                }
+                                if(!match) match = candidates.find(x => x.used<x.qty);
+
+                                if(match) {
+                                    match.used++; status="Warning"; matchClass="text-orange-600 font-bold"; 
+                                    sysBatch=match.batch; sysSer=match.ser; sysPlant=match.plant; sysCust=match.cust; sysName=match.name; matDesc=match.desc;
+                                    comment="Material Only"; priority=1; stats.matMatch++;
+                                } else {
+                                    stats.var++;
+                                }
+                            }
+                        }
+                    }
+
+                    zcpuData.push({
+                        status, matchClass, priority, phyState, stateClass, storageLoc,
+                        mat: p.mat, matDesc, scanString: raw, phyBatch: p.batch, phySer: p.ser, isDef: p.isDefSer,
+                        sysBatch, sysSer, sysPlant, sysCust, sysName, comment
+                    });
+                }
+
+                displayedData = [...zcpuData];
+                renderTable(displayedData);
+                document.getElementById('zcpuDashboard').classList.remove('hidden');
+                
+                safeUpdate('kpi-sap', totalSap);
+                safeUpdate('kpi-scan', stats.tot);
+                safeUpdate('kpi-match', stats.matchExact + stats.matchSmart);
+                safeUpdate('kpi-serial', stats.matchExact + stats.matchSmart);
+                safeUpdate('kpi-serial-detail', `(${stats.matchExact} Exact + ${stats.matchSmart} Smart)`);
+                safeUpdate('kpi-batch', stats.batchMatch);
+                safeUpdate('kpi-mat', stats.matMatch);
+                safeUpdate('kpi-var', stats.var);
+                safeUpdate('kpi-dmg', stats.dmg);
+                safeUpdate('kpi-remain', totalSap - (inventoryMap ? Object.values(inventoryMap).reduce((a,b)=>a+b.reduce((c,d)=>c+d.used,0),0) : 0));
+                
+                btn.innerHTML = `VALIDATE`;
+
+            } catch(e) { alert("Error: "+e.message); btn.innerHTML = "Retry"; }
+        }
+
+        function renderTable(data) {
+            document.getElementById('zcpuBody').innerHTML = data.map(r => `
+                <tr class="hover:bg-gray-50 border-b">
+                    <td class="px-4 py-2 ${r.matchClass}">${r.status}</td>
+                    <td class="px-4 py-2"><span class="${r.stateClass}">${r.phyState}</span></td>
+                    <td class="px-4 py-2 bg-gray-200 font-bold text-gray-800 text-center">${r.storageLoc}</td>
+                    <td class="px-4 py-2 font-mono font-bold">${r.mat}</td>
+                    <td class="px-4 py-2 text-xs truncate max-w-[150px]" title="${r.matDesc}">${r.matDesc}</td>
+                    <td class="px-4 py-2 text-[10px] text-gray-500 font-mono truncate max-w-[100px]">${r.scanString}</td>
+                    <td class="px-4 py-2 text-xs bg-blue-50">${r.phyBatch}</td>
+                    <td class="px-4 py-2 text-xs bg-blue-50">${r.phySer}</td>
+                    <td class="px-4 py-2 text-xs bg-green-50">${r.sysBatch}</td>
+                    <td class="px-4 py-2 text-xs bg-green-50">${r.sysSer}</td>
+                    <td class="px-4 py-2 text-xs font-bold bg-gray-100">${r.sysPlant}</td>
+                    <td class="px-4 py-2 text-xs bg-yellow-50">${r.sysCust}</td>
+                    <td class="px-4 py-2 text-xs bg-yellow-50 truncate max-w-[150px]">${r.sysName}</td>
+                    <td class="px-4 py-2 text-xs italic text-gray-400">${r.comment}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterTable() {
+            const term = document.getElementById('searchBox').value.toLowerCase();
+            displayedData = zcpuData.filter(x => x.mat.toLowerCase().includes(term) || x.phyBatch.toLowerCase().includes(term));
+            renderTable(displayedData);
+        }
+
+        function sortBy(key) {
+            if (sortState.key === key) sortState.order = sortState.order === 'asc' ? 'desc' : 'asc';
+            else { sortState.key = key; sortState.order = 'asc'; }
+            displayedData.sort((a, b) => {
+                let vA = a[key] || "", vB = b[key] || "";
+                return (vA < vB ? -1 : 1) * (sortState.order === 'asc' ? 1 : -1);
+            });
+            renderTable(displayedData);
+        }
+
+        function exportZCPU() {
+            const layoutStr = document.getElementById('txtExportLayout').value;
+            const columns = layoutStr.split(',').map(s => s.trim());
+            
+            const exportData = zcpuData.map(r => {
+                let row = {};
+                const map = {
+                    'Status': r.status, 'Condition': r.phyState, 'Storage_Loc': r.storageLoc,
+                    'Material': r.mat, 'Material_Desc': r.matDesc, 'Scan_String': r.scanString,
+                    'Phy_Batch': r.phyBatch, 'Phy_Serial': r.phySer,
+                    'Sys_Batch': r.sysBatch, 'Sys_Serial': r.sysSer,
+                    'Plant': r.sysPlant, 'Customer': r.sysCust, 'Name': r.sysName, 'Comment': r.comment
+                };
+                columns.forEach(col => row[col] = map[col] || "");
+                return row;
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                let addr = XLSX.utils.encode_col(C) + "1";
+                if (!ws[addr]) continue;
+                ws[addr].s = {
+                    font: { bold: true, color: { rgb: "FFFFFF" } },
+                    fill: { fgColor: { rgb: "4472C4" } }, // Blue Header
+                    border: { bottom: { style: "medium", color: { rgb: "000000" } } }
+                };
+            }
+            ws['!cols'] = columns.map(() => ({ wch: 18 }));
+
+            XLSX.utils.book_append_sheet(wb, ws, "ZCPU_Result");
+            XLSX.writeFile(wb, "ZCPU_Export.xlsx");
+        }
+    </script>
+</body>
+</html>
